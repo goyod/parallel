@@ -7,23 +7,40 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"log"
+	mrand "math/rand"
 )
 
 func main() {
-	b := make([]byte, 16)
-	_, err := rand.Read(b)
-	if err != nil {
-		log.Fatal(err)
+	chRand := make(chan []byte)
+	ciphertext := make(chan string)
+
+	go encrypter(chRand, ciphertext)
+
+	go func() {
+		for i := 0; i < 10; i++ {
+			chRand <- []byte(RandStringBytes(16))
+		}
+	}()
+
+	for i := 0; i < 10; i++ {
+		fmt.Println(<-ciphertext)
 	}
+}
 
-	enc := encrypt([]byte("exampleplaintext"))
+func encrypter(chRand chan []byte, ciphertext chan string) {
+	for {
+		ciphertext <- encrypt(<-chRand)
+	}
+}
 
-	fmt.Println(enc)
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-	ciphertext, _ := hex.DecodeString("73c86d43a9d700a253a96c85b0f6b03ac9792e0e757f869cca306bd3cba1c62b")
-
-	fmt.Println(decrypt(ciphertext))
+func RandStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[mrand.Intn(len(letterBytes))]
+	}
+	return string(b)
 }
 
 var key, _ = hex.DecodeString("6368616e676520746869732070617373")
